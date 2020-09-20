@@ -1,0 +1,1 @@
+web: streamlit run financial_reporting.py
