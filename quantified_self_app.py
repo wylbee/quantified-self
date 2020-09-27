@@ -166,7 +166,7 @@ def main():
             ),
             data=okrs
         ).facet(
-            row=alt.Row("metric_name:O", sort="descending", title=None, header=alt.Header(labels=False)),
+            row=alt.Row("key_result_text:O", sort="ascending", title=None, header=alt.Header(labels=False)),
             spacing=60
         ).resolve_scale(
             y='independent'
