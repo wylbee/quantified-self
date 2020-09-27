@@ -5,6 +5,7 @@ import altair as alt
 import psycopg2
 import os
 
+
 # Connect to database and enable running of queries
 # %%
 db_host = os.getenv("SWA_DB_HOST")
@@ -42,6 +43,8 @@ df = create_df_from_query(
 
        left outer join dev_wbrown.dim_okrs
             on metrics_okrs.key_result_id = dim_okrs.key_result_id
+        
+        where metrics_okrs.key_result_id != '2'
 
        """
 )
@@ -65,24 +68,24 @@ def main():
 
     bullet_chart = alt.layer(
             alt.Chart().mark_bar(
-                color= '#cbdae6'#c4c4c4',
+                color= '#c0b8b4',
             ).encode(
                 alt.X("target_value_good_to_max:Q", scale=alt.Scale(nice=False), title=None)
             ).properties(
                 height=50
             ),
             alt.Chart().mark_bar(
-                color= '#bacddd'#'#9d9d9d'
+                color= '#a59c99'
             ).encode(
                 x="target_value_average_to_good:Q"
             ),
             alt.Chart().mark_bar(
-                color='#a9c1d5' #'#757575'
+                color='#8b827f'
             ).encode(
                 x="target_value_poor_to_average:Q"
             ),
             alt.Chart().mark_bar(
-                color='#1A488F',
+                color='#385B9F',
                 size=7
             ).encode(
                 x='metric_value:Q',
@@ -119,7 +122,7 @@ def main():
     
     sparkline = alt.layer(
             alt.Chart().mark_area(
-                color='#cbdae6'
+                color='#c0b8b4'
             ).encode(
                 alt.X(
                     "date_day:T", 
@@ -137,19 +140,19 @@ def main():
                 height=50
             ),
             alt.Chart().mark_area(
-                 color='#bacddd'
+                 color='#a59c99'
             ).encode(
                 x="date_day:T",
                 y="target_value_average_to_good:Q"
             ),
             alt.Chart().mark_area(
-                 color='#a9c1d5'
+                 color='#8b827f'
             ).encode(
                 x="date_day:T",
                 y="target_value_poor_to_average:Q"
             ),
             alt.Chart().mark_line(
-                color= '#1A488F'
+                color= '#385B9F'
             ).encode(
                 x='date_day:T',
                 y='metric_value'
