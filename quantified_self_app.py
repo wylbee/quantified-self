@@ -5,7 +5,6 @@ import altair as alt
 import psycopg2
 import os
 
-
 # Connect to database and enable running of queries
 # %%
 db_host = os.getenv("SWA_DB_HOST")
@@ -39,9 +38,9 @@ df = create_df_from_query(
             dim_okrs.objective_text,
             dim_okrs.key_result_text
 
-       from dev_wbrown.metrics_okrs
+       from mart_quantified_self.metrics_okrs
 
-       left outer join dev_wbrown.dim_okrs
+       left outer join mart_quantified_self.dim_okrs
             on metrics_okrs.key_result_id = dim_okrs.key_result_id
         
         where metrics_okrs.key_result_id != '2'
@@ -60,9 +59,7 @@ alt.themes.enable("latimes")
 
 def main():
 
-    st.title("WIP")
-
-    st.header("OKRs")
+    st.title("Personal OKRs")
     
     okrs_latest = okrs[(okrs['date_day'] == okrs['date_day'].max())]
 
