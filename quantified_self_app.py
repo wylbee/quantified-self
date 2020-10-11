@@ -56,11 +56,10 @@ alt.themes.enable("latimes")
 
 # Define app structure and logic
 
-
 def main():
 
     st.title("Personal OKRs")
-    
+
     okrs_latest = okrs[(okrs['date_day'] == okrs['date_day'].max())]
 
     bullet_chart = alt.layer(
