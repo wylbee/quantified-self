@@ -35,8 +35,20 @@ df = create_df_from_query(
     """
        select
             metrics_okrs.*,
+            concat(
+            	TRUNC(dim_okrs.objective_id,0),
+            	'.',
+            	TRUNC(dim_okrs.key_result_id,0) 
+            ) as okr_id,
             dim_okrs.objective_text,
-            dim_okrs.key_result_text
+            dim_okrs.key_result_text,
+            concat(
+            	TRUNC(dim_okrs.objective_id,0),
+            	'.',
+            	TRUNC(dim_okrs.key_result_id,0),
+            	' - ',
+            	dim_okrs.key_result_text
+            ) as okr_display_text
 
        from mart_quantified_self.metrics_okrs
 
@@ -111,7 +123,7 @@ def main():
             ),
             data=okrs_latest
         ).facet(
-            row=alt.Row("key_result_text:O", sort="ascending", title=None, header=alt.Header(labelOrient='top', labelAnchor="start"))
+            row=alt.Row("okr_display_text:O", sort="ascending", title=None, header=alt.Header(labelOrient='top', labelAnchor="start"))
         ).resolve_scale(
             x='independent'
         )
@@ -162,7 +174,7 @@ def main():
             ),
             data=okrs
         ).facet(
-            row=alt.Row("key_result_text:O", sort="ascending", title=None, header=alt.Header(labels=False)),
+            row=alt.Row("okr_display_text:O", sort="ascending", title=None, header=alt.Header(labels=False)),
             spacing=60
         ).resolve_scale(
             y='independent'
