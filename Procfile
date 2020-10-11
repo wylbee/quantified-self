@@ -1,1 +1,1 @@
-web: streamlit run financial_reporting.py
+web: streamlit run quantified_self_app.py
