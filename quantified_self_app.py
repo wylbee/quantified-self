@@ -4,6 +4,8 @@ import pandas as pd
 import altair as alt
 import psycopg2
 import os
+import numpy as np
+
 
 # Connect to database and enable running of queries
 # %%
@@ -40,6 +42,7 @@ df = create_df_from_query(
             	'.',
             	TRUNC(dim_okrs.key_result_id,0) 
             ) as okr_id,
+            dim_okrs.objective_id,
             dim_okrs.objective_text,
             dim_okrs.key_result_text,
             concat(
@@ -62,6 +65,27 @@ df = create_df_from_query(
 okrs = df.copy()
 
 okrs["date_day"] = pd.to_datetime(okrs["date_day"])
+
+okr_text = create_df_from_query(
+    """
+    select
+        concat(
+            TRUNC(objective_id,0),
+            '.',
+            TRUNC(key_result_id,0) 
+        ) as okr_id,
+        objective_id,
+        objective_text,
+        key_result_id,
+        key_result_text
+    
+    from mart_quantified_self.dim_okrs
+
+    where key_result_id != '2'
+
+    order by 1
+    """
+)
 
 # Set viz theme
 alt.themes.enable("latimes")
@@ -181,6 +205,8 @@ def main():
         )
     
     st.altair_chart(bullet_chart | sparkline)
+
+    st.table(okr_text)
 
 
 # Initialize app
