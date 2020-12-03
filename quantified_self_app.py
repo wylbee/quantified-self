@@ -6,7 +6,6 @@ import psycopg2
 import os
 import numpy as np
 
-
 # Connect to database and enable running of queries
 # %%
 db_host = os.getenv("SWA_DB_HOST")
@@ -16,7 +15,6 @@ db_user = os.getenv("SWA_DB_USER")
 db_pass = os.getenv("SWA_DB_PASS")
 
 
-@st.cache
 def create_df_from_query(sql_query):
     """
     Uses stored credentials to open a connection to the database, run a provided query,
@@ -35,57 +33,20 @@ def create_df_from_query(sql_query):
 # Import data & clean up data types
 df = create_df_from_query(
     """
-       select
-            metrics_okrs.*,
-            concat(
-            	TRUNC(dim_okrs.objective_id,0),
-            	'.',
-            	TRUNC(dim_okrs.key_result_id,0) 
-            ) as okr_id,
-            dim_okrs.objective_id,
-            dim_okrs.objective_text,
-            dim_okrs.key_result_text,
-            concat(
-            	TRUNC(dim_okrs.objective_id,0),
-            	'.',
-            	TRUNC(dim_okrs.key_result_id,0),
-            	' - ',
-            	dim_okrs.key_result_text
-            ) as okr_display_text
+    select 
+        *,
+        daily_minutes_target *.6 as daily_minutes_target_fail,
+        daily_minutes_target *.8 as daily_minutes_target_low
 
-       from mart_quantified_self.metrics_okrs
+    from analytics.dev_wbrown.ps_daily_time_tracks
 
-       left outer join mart_quantified_self.dim_okrs
-            on metrics_okrs.key_result_id = dim_okrs.key_result_id
-        
-        where metrics_okrs.key_result_id != '2'
-
-       """
-)
-okrs = df.copy()
-
-okrs["date_day"] = pd.to_datetime(okrs["date_day"])
-
-okr_text = create_df_from_query(
-    """
-    select
-        concat(
-            TRUNC(objective_id,0),
-            '.',
-            TRUNC(key_result_id,0) 
-        ) as okr_id,
-        objective_id,
-        objective_text,
-        key_result_id,
-        key_result_text
-    
-    from mart_quantified_self.dim_okrs
-
-    where key_result_id != '2'
-
-    order by 1
+    where task_category is not null and date_day >= '2020-11-01'
     """
 )
+
+kpis = df.copy()
+
+kpis["date_day"] = pd.to_datetime(kpis["date_day"])
 
 # Set viz theme
 alt.themes.enable("latimes")
@@ -94,60 +55,60 @@ alt.themes.enable("latimes")
 
 def main():
 
-    st.title("Personal OKRs")
+    st.title("Personal KPIs")
 
-    okrs_latest = okrs[(okrs['date_day'] == okrs['date_day'].max())]
+    kpis_latest = kpis[(kpis['date_day'] == kpis['date_day'].max())]
 
     bullet_chart = alt.layer(
             alt.Chart().mark_bar(
                 color= '#c0b8b4',
             ).encode(
-                alt.X("target_value_good_to_max:Q", scale=alt.Scale(nice=False), title=None)
+                alt.X("daily_minutes_target:Q", scale=alt.Scale(nice=False), title=None)
             ).properties(
                 height=50
             ),
             alt.Chart().mark_bar(
                 color= '#a59c99'
             ).encode(
-                x="target_value_average_to_good:Q"
+                x="daily_minutes_target_low:Q"
             ),
             alt.Chart().mark_bar(
                 color='#8b827f'
             ).encode(
-                x="target_value_poor_to_average:Q"
+                x="daily_minutes_target_fail:Q"
             ),
             alt.Chart().mark_bar(
                 color='#385B9F',
                 size=7
             ).encode(
-                x='metric_value:Q',
+                x='rolling_avg_daily_minutes_actual:Q',
                 tooltip=[
                     alt.Tooltip(
-                        "key_result_value:Q",
-                        title="Key Result Target"
+                        "daily_minutes_target:Q",
+                        title="System Target"
                     ),
                     alt.Tooltip(
-                        "metric_value:Q",
+                        "rolling_avg_daily_minutes_actual:Q",
                         title="Actual"
                     ),
                     alt.Tooltip(
-                        "target_value_poor_to_average:Q",
-                        title="Poor->Average Threshold"
+                        "daily_minutes_target_fail:Q",
+                        title="Failure State Threshold"
                     ),
                     alt.Tooltip(
-                        "target_value_average_to_good:Q",
-                        title="Average->Good Threshold"
+                        "daily_minutes_target_low:Q",
+                        title="Warning Threshold"
                     )
                 ]
             ),
             alt.Chart().mark_tick(
                 color='black'
             ).encode(
-                x='key_result_value:Q'
+                x='daily_minutes_target:Q'
             ),
-            data=okrs_latest
+            data=kpis_latest
         ).facet(
-            row=alt.Row("okr_display_text:O", sort="ascending", title=None, header=alt.Header(labelOrient='top', labelAnchor="start"))
+            row=alt.Row("task_category:O", sort="ascending", title=None, header=alt.Header(labelOrient='top', labelAnchor="start"))
         ).resolve_scale(
             x='independent'
         )
@@ -163,7 +124,7 @@ def main():
                     axis=alt.Axis(labels=False, grid=False, domain=False, ticks=False)
                 ),
                 alt.Y(
-                    "target_value_good_to_max:Q", 
+                    "daily_minutes_target:Q", 
                     scale=alt.Scale(nice=False), 
                     title=None,
                     axis=alt.Axis(labels=False, grid=False, domain=False, ticks=False)
@@ -175,38 +136,36 @@ def main():
                  color='#a59c99'
             ).encode(
                 x="date_day:T",
-                y="target_value_average_to_good:Q"
+                y="daily_minutes_target_low:Q"
             ),
             alt.Chart().mark_area(
                  color='#8b827f'
             ).encode(
                 x="date_day:T",
-                y="target_value_poor_to_average:Q"
+                y="daily_minutes_target_fail:Q"
             ),
             alt.Chart().mark_line(
                 color= '#385B9F'
             ).encode(
                 x='date_day:T',
-                y='metric_value'
+                y='rolling_avg_daily_minutes_actual:Q'
             ),
             alt.Chart().mark_line(
                 color='black',
                 size=1
             ).encode(
                 x='date_day:T',
-                y='key_result_value:Q'
+                y='daily_minutes_target:Q'
             ),
-            data=okrs
+            data=kpis
         ).facet(
-            row=alt.Row("okr_display_text:O", sort="ascending", title=None, header=alt.Header(labels=False)),
+            row=alt.Row("task_category:O", sort="ascending", title=None, header=alt.Header(labels=False)),
             spacing=60
         ).resolve_scale(
             y='independent'
         )
     
     st.altair_chart(bullet_chart | sparkline)
-
-    st.table(okr_text)
 
 
 # Initialize app
