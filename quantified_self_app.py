@@ -36,7 +36,17 @@ df = create_df_from_query(
     select 
         *,
         daily_minutes_target *.6 as daily_minutes_target_fail,
-        daily_minutes_target *.8 as daily_minutes_target_low
+        daily_minutes_target *.8 as daily_minutes_target_low,
+
+        case
+            when rolling_avg_daily_minutes_actual < daily_minutes_target *.6 then '🚩'
+        end as failure_flag,
+
+        case 
+            when task_category = 'deep_work_okr' then 'Deep work on personal OKRs (6 week rolling average of minutes per day)'
+            when task_category = 'deep_work_professional' then 'Deep work on professional priorities (6 week rolling average of minutes per day)'
+            when task_category = 'slope_learning' then 'Learning and practicing (6 week rolling average of minutes per day)'
+        end as display_description
 
     from analytics.dev_wbrown.ps_daily_time_tracks
 
@@ -55,10 +65,9 @@ alt.themes.enable("latimes")
 
 def main():
 
-    st.title("Personal KPIs")
-
+    st.title("Life Metrics")
     kpis_latest = kpis[(kpis['date_day'] == kpis['date_day'].max())]
-
+    st.header("Focus")
     bullet_chart = alt.layer(
             alt.Chart().mark_bar(
                 color= '#c0b8b4',
@@ -108,7 +117,7 @@ def main():
             ),
             data=kpis_latest
         ).facet(
-            row=alt.Row("task_category:O", sort="ascending", title=None, header=alt.Header(labelOrient='top', labelAnchor="start"))
+            row=alt.Row("display_description:O", sort="ascending", title=None, header=alt.Header(labelOrient='top', labelAnchor="start"))
         ).resolve_scale(
             x='independent'
         )
@@ -159,7 +168,7 @@ def main():
             ),
             data=kpis
         ).facet(
-            row=alt.Row("task_category:O", sort="ascending", title=None, header=alt.Header(labels=False)),
+            row=alt.Row("display_description:O", sort="ascending", title=None, header=alt.Header(labels=False)),
             spacing=60
         ).resolve_scale(
             y='independent'
@@ -167,6 +176,7 @@ def main():
     
     st.altair_chart(bullet_chart | sparkline)
 
+    st.header('Learning')
 
 # Initialize app
 if __name__ == "__main__":
