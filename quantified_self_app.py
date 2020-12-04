@@ -43,9 +43,9 @@ df = create_df_from_query(
         end as failure_flag,
 
         case 
-            when task_category = 'deep_work_okr' then 'Deep work on personal OKRs (6 week rolling average of minutes per day)'
-            when task_category = 'deep_work_professional' then 'Deep work on professional priorities (6 week rolling average of minutes per day)'
-            when task_category = 'slope_learning' then 'Learning and practicing (6 week rolling average of minutes per day)'
+            when task_category = 'deep_work_okr' then 'Time spent in deep work on personal OKRs (6 week rolling average of minutes per day)'
+            when task_category = 'deep_work_professional' then 'Time spent in deep work on professional priorities (6 week rolling average of minutes per day)'
+            when task_category = 'slope_learning' then 'Time spent learning and practicing (6 week rolling average of minutes per day)'
         end as display_description
 
     from analytics.dev_wbrown.ps_daily_time_tracks
