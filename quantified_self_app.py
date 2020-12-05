@@ -42,6 +42,7 @@ def graph_as_bullet_sparkline(
     low_value_column=None,
     failing_value_column=None,
     description_column=None,
+    flagged_description_column=None,
     time_column=None,
     filter_field=None,
     filter_value=None,
@@ -75,7 +76,7 @@ def graph_as_bullet_sparkline(
         )
         .facet(
             row=alt.Row(
-                f"{description_column}:O",
+                f"{flagged_description_column}:O",
                 sort="ascending",
                 title=None,
                 header=alt.Header(labelOrient="top", labelAnchor="start"),
@@ -141,25 +142,37 @@ def graph_as_bullet_sparkline(
 # Import data & clean up data types
 df = create_df_from_query(
     """
-    select 
+    with
+
+    query as (
+
+        select 
+            *,
+            daily_minutes_target *.6 as daily_minutes_target_fail,
+            daily_minutes_target *.90 as daily_minutes_target_low,
+            daily_minutes_target *1.2 as daily_minutes_target_above,
+
+            case
+                when rolling_avg_daily_minutes_actual < daily_minutes_target *.6 then ' 🚩'
+            end as failure_flag,
+
+            case 
+                when task_category = 'deep_work_okr' then 'Time spent in deep work on personal OKRs (6 week rolling average of minutes per day)'
+                when task_category = 'deep_work_professional' then 'Time spent in deep work on professional priorities (6 week rolling average of minutes per day)'
+                when task_category = 'slope_learning' then 'Time spent learning and practicing (6 week rolling average of minutes per day)'
+            end as display_description
+
+        from analytics.dev_wbrown.ps_daily_time_tracks
+
+        where task_category is not null and date_day >= '2020-11-01'
+    )
+
+    select
         *,
-        daily_minutes_target *.6 as daily_minutes_target_fail,
-        daily_minutes_target *1 as daily_minutes_target_low,
-        daily_minutes_target *1.2 as daily_minutes_target_above,
 
-        case
-            when rolling_avg_daily_minutes_actual < daily_minutes_target *.6 then '🚩'
-        end as failure_flag,
-
-        case 
-            when task_category = 'deep_work_okr' then 'Time spent in deep work on personal OKRs (6 week rolling average of minutes per day)'
-            when task_category = 'deep_work_professional' then 'Time spent in deep work on professional priorities (6 week rolling average of minutes per day)'
-            when task_category = 'slope_learning' then 'Time spent learning and practicing (6 week rolling average of minutes per day)'
-        end as display_description
-
-    from analytics.dev_wbrown.ps_daily_time_tracks
-
-    where task_category is not null and date_day >= '2020-11-01'
+        concat(display_description, failure_flag) as display_description_with_flag
+    
+    from query
     """
 )
 
@@ -187,6 +200,7 @@ def main():
         low_value_column="daily_minutes_target_low",
         failing_value_column="daily_minutes_target_fail",
         time_column="date_day",
+        flagged_description_column="display_description_with_flag",
         description_column="display_description",
         filter_field="task_category",
         filter_value=["deep_work_okr", "deep_work_professional"],
@@ -202,6 +216,7 @@ def main():
         low_value_column="daily_minutes_target_low",
         failing_value_column="daily_minutes_target_fail",
         time_column="date_day",
+        flagged_description_column="display_description_with_flag",
         description_column="display_description",
         filter_field="task_category",
         filter_value=["slope_learning"],
