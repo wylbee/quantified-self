@@ -30,13 +30,122 @@ def create_df_from_query(sql_query):
     return df
 
 
+# Define visualization functions
+
+
+def graph_as_bullet_sparkline(
+    pit_data=None,
+    hist_data=None,
+    actual_column=None,
+    target_column=None,
+    above_column=None,
+    low_value_column=None,
+    failing_value_column=None,
+    description_column=None,
+    time_column=None,
+    filter_field=None,
+    filter_value=None,
+):
+
+    bullet_chart = (
+        alt.layer(
+            alt.Chart()
+            .mark_bar(
+                color="#c0b8b4",
+            )
+            .encode(alt.X(f"{above_column}:Q", scale=alt.Scale(nice=False), title=None))
+            .properties(height=50),
+            alt.Chart().mark_bar(color="#a59c99").encode(x=f"{low_value_column}:Q"),
+            alt.Chart().mark_bar(color="#8b827f").encode(x=f"{failing_value_column}:Q"),
+            alt.Chart()
+            .mark_bar(color="#385B9F", size=7)
+            .encode(
+                x=f"{actual_column}:Q",
+                tooltip=[
+                    alt.Tooltip(f"{target_column}:Q", title="System Target"),
+                    alt.Tooltip(f"{actual_column}:Q", title="Actual"),
+                    alt.Tooltip(
+                        f"{failing_value_column}:Q", title="Failure State Threshold"
+                    ),
+                    alt.Tooltip(f"{low_value_column}:Q", title="Warning Threshold"),
+                ],
+            ),
+            alt.Chart().mark_tick(color="black").encode(x=f"{target_column}:Q"),
+            data=pit_data,
+        )
+        .facet(
+            row=alt.Row(
+                f"{description_column}:O",
+                sort="ascending",
+                title=None,
+                header=alt.Header(labelOrient="top", labelAnchor="start"),
+            )
+        )
+        .resolve_scale(x="independent")
+        .transform_filter(
+            alt.FieldOneOfPredicate(field=f"{filter_field}", oneOf=filter_value)
+        )
+    )
+
+    sparkline = (
+        alt.layer(
+            alt.Chart()
+            .mark_area(color="#c0b8b4")
+            .encode(
+                alt.X(
+                    f"{time_column}:T",
+                    scale=alt.Scale(nice=False),
+                    title=None,
+                    axis=alt.Axis(labels=False, grid=False, domain=False, ticks=False),
+                ),
+                alt.Y(
+                    f"{above_column}:Q",
+                    scale=alt.Scale(nice=False),
+                    title=None,
+                    axis=alt.Axis(labels=False, grid=False, domain=False, ticks=False),
+                ),
+            )
+            .properties(height=50),
+            alt.Chart()
+            .mark_area(color="#a59c99")
+            .encode(x=f"{time_column}:T", y=f"{low_value_column}:Q"),
+            alt.Chart()
+            .mark_area(color="#8b827f")
+            .encode(x=f"{time_column}:T", y=f"{failing_value_column}:Q"),
+            alt.Chart()
+            .mark_line(color="#385B9F")
+            .encode(x=f"{time_column}:T", y=f"{actual_column}:Q"),
+            alt.Chart()
+            .mark_line(color="black", size=1)
+            .encode(x=f"{time_column}:T", y=f"{target_column}:Q"),
+            data=hist_data,
+        )
+        .facet(
+            row=alt.Row(
+                f"{description_column}:O",
+                sort="ascending",
+                title=None,
+                header=alt.Header(labels=False),
+            ),
+            spacing=60,
+        )
+        .resolve_scale(y="independent")
+        .transform_filter(
+            alt.FieldOneOfPredicate(field=f"{filter_field}", oneOf=filter_value)
+        )
+    )
+
+    return st.altair_chart(bullet_chart | sparkline)
+
+
 # Import data & clean up data types
 df = create_df_from_query(
     """
     select 
         *,
         daily_minutes_target *.6 as daily_minutes_target_fail,
-        daily_minutes_target *.8 as daily_minutes_target_low,
+        daily_minutes_target *1 as daily_minutes_target_low,
+        daily_minutes_target *1.2 as daily_minutes_target_above,
 
         case
             when rolling_avg_daily_minutes_actual < daily_minutes_target *.6 then '🚩'
@@ -63,120 +172,41 @@ alt.themes.enable("latimes")
 
 # Define app structure and logic
 
+
 def main():
 
     st.title("Life Metrics")
-    kpis_latest = kpis[(kpis['date_day'] == kpis['date_day'].max())]
+    kpis_latest = kpis[(kpis["date_day"] == kpis["date_day"].max())]
     st.header("Focus")
-    bullet_chart = alt.layer(
-            alt.Chart().mark_bar(
-                color= '#c0b8b4',
-            ).encode(
-                alt.X("daily_minutes_target:Q", scale=alt.Scale(nice=False), title=None)
-            ).properties(
-                height=50
-            ),
-            alt.Chart().mark_bar(
-                color= '#a59c99'
-            ).encode(
-                x="daily_minutes_target_low:Q"
-            ),
-            alt.Chart().mark_bar(
-                color='#8b827f'
-            ).encode(
-                x="daily_minutes_target_fail:Q"
-            ),
-            alt.Chart().mark_bar(
-                color='#385B9F',
-                size=7
-            ).encode(
-                x='rolling_avg_daily_minutes_actual:Q',
-                tooltip=[
-                    alt.Tooltip(
-                        "daily_minutes_target:Q",
-                        title="System Target"
-                    ),
-                    alt.Tooltip(
-                        "rolling_avg_daily_minutes_actual:Q",
-                        title="Actual"
-                    ),
-                    alt.Tooltip(
-                        "daily_minutes_target_fail:Q",
-                        title="Failure State Threshold"
-                    ),
-                    alt.Tooltip(
-                        "daily_minutes_target_low:Q",
-                        title="Warning Threshold"
-                    )
-                ]
-            ),
-            alt.Chart().mark_tick(
-                color='black'
-            ).encode(
-                x='daily_minutes_target:Q'
-            ),
-            data=kpis_latest
-        ).facet(
-            row=alt.Row("display_description:O", sort="ascending", title=None, header=alt.Header(labelOrient='top', labelAnchor="start"))
-        ).resolve_scale(
-            x='independent'
-        )
-    
-    sparkline = alt.layer(
-            alt.Chart().mark_area(
-                color='#c0b8b4'
-            ).encode(
-                alt.X(
-                    "date_day:T", 
-                    scale=alt.Scale(nice=False), 
-                    title=None,
-                    axis=alt.Axis(labels=False, grid=False, domain=False, ticks=False)
-                ),
-                alt.Y(
-                    "daily_minutes_target:Q", 
-                    scale=alt.Scale(nice=False), 
-                    title=None,
-                    axis=alt.Axis(labels=False, grid=False, domain=False, ticks=False)
-                )
-            ).properties(
-                height=50
-            ),
-            alt.Chart().mark_area(
-                 color='#a59c99'
-            ).encode(
-                x="date_day:T",
-                y="daily_minutes_target_low:Q"
-            ),
-            alt.Chart().mark_area(
-                 color='#8b827f'
-            ).encode(
-                x="date_day:T",
-                y="daily_minutes_target_fail:Q"
-            ),
-            alt.Chart().mark_line(
-                color= '#385B9F'
-            ).encode(
-                x='date_day:T',
-                y='rolling_avg_daily_minutes_actual:Q'
-            ),
-            alt.Chart().mark_line(
-                color='black',
-                size=1
-            ).encode(
-                x='date_day:T',
-                y='daily_minutes_target:Q'
-            ),
-            data=kpis
-        ).facet(
-            row=alt.Row("display_description:O", sort="ascending", title=None, header=alt.Header(labels=False)),
-            spacing=60
-        ).resolve_scale(
-            y='independent'
-        )
-    
-    st.altair_chart(bullet_chart | sparkline)
+    graph_as_bullet_sparkline(
+        pit_data=kpis_latest,
+        hist_data=kpis,
+        actual_column="rolling_avg_daily_minutes_actual",
+        target_column="daily_minutes_target",
+        above_column="daily_minutes_target_above",
+        low_value_column="daily_minutes_target_low",
+        failing_value_column="daily_minutes_target_fail",
+        time_column="date_day",
+        description_column="display_description",
+        filter_field="task_category",
+        filter_value=["deep_work_okr", "deep_work_professional"],
+    )
 
-    st.header('Learning')
+    st.header("Learning")
+    graph_as_bullet_sparkline(
+        pit_data=kpis_latest,
+        hist_data=kpis,
+        actual_column="rolling_avg_daily_minutes_actual",
+        target_column="daily_minutes_target",
+        above_column="daily_minutes_target_above",
+        low_value_column="daily_minutes_target_low",
+        failing_value_column="daily_minutes_target_fail",
+        time_column="date_day",
+        description_column="display_description",
+        filter_field="task_category",
+        filter_value=["slope_learning"],
+    )
+
 
 # Initialize app
 if __name__ == "__main__":
