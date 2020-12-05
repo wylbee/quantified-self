@@ -6,6 +6,7 @@ import psycopg2
 import os
 import numpy as np
 
+
 # Connect to database and enable running of queries
 # %%
 db_host = os.getenv("SWA_DB_HOST")
@@ -30,7 +31,7 @@ def create_df_from_query(sql_query):
     return df
 
 
-# Define visualization functions
+# Define visualization function
 
 
 def graph_as_bullet_sparkline(
@@ -55,7 +56,7 @@ def graph_as_bullet_sparkline(
                 color="#c0b8b4",
             )
             .encode(alt.X(f"{above_column}:Q", scale=alt.Scale(nice=False), title=None))
-            .properties(height=50),
+            .properties(height=50, width=500),
             alt.Chart().mark_bar(color="#a59c99").encode(x=f"{low_value_column}:Q"),
             alt.Chart().mark_bar(color="#8b827f").encode(x=f"{failing_value_column}:Q"),
             alt.Chart()
@@ -190,6 +191,7 @@ def main():
 
     st.title("Life Metrics")
     kpis_latest = kpis[(kpis["date_day"] == kpis["date_day"].max())]
+
     st.header("Focus")
     graph_as_bullet_sparkline(
         pit_data=kpis_latest,
