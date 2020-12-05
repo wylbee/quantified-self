@@ -163,7 +163,7 @@ df = create_df_from_query(
                 when task_category = 'slope_learning' then 'Time spent learning and practicing (6 week rolling average of minutes per day)'
             end as display_description
 
-        from analytics.dev_wbrown.ps_daily_time_tracks
+        from analytics.mart_quantified_self.ps_daily_time_tracks
 
         where task_category is not null and date_day >= '2020-11-01'
     )
