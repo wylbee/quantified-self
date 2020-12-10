@@ -6,7 +6,6 @@ import psycopg2
 import os
 import numpy as np
 
-
 # Connect to database and enable running of queries
 # %%
 db_host = os.getenv("SWA_DB_HOST")
@@ -141,7 +140,7 @@ def graph_as_bullet_sparkline(
 
 
 # Import data & clean up data types
-df = create_df_from_query(
+df_time = create_df_from_query(
     """
     with
 
@@ -177,12 +176,51 @@ df = create_df_from_query(
     """
 )
 
-kpis = df.copy()
+kpis_time = df_time.copy()
 
-kpis["date_day"] = pd.to_datetime(kpis["date_day"])
+kpis_time["date_day"] = pd.to_datetime(kpis_time["date_day"])
+
+df_notes = create_df_from_query(
+    """
+    with
+
+    query as (
+
+        select 
+            *,
+            daily_notes_target *.6 as daily_notes_target_fail,
+            daily_notes_target *.90 as daily_notes_target_low,
+            daily_notes_target *1.2 as daily_notes_target_above,
+
+            case
+                when rolling_avg_daily_notes_actual < daily_notes_target *.6 then ' 🚩'
+            end as failure_flag,
+
+            case 
+                when task_category = 'atomic_notes' then '# atomic notes added to Zettelkasten (6 week rolling average of notes per day)'
+            end as display_description
+
+        from analytics.mart_quantified_self.ps_daily_note_writes
+
+        where task_category is not null and date_day >= '2020-11-01'
+    )
+
+    select
+        *,
+
+        concat(display_description, failure_flag) as display_description_with_flag
+    
+    from query
+    """
+)
+
+kpis_notes = df_notes.copy()
+
+kpis_notes["date_day"] = pd.to_datetime(kpis_notes["date_day"])
 
 # Set viz theme
 alt.themes.enable("latimes")
+st.set_page_config(layout="wide")
 
 # Define app structure and logic
 
@@ -190,12 +228,13 @@ alt.themes.enable("latimes")
 def main():
 
     st.title("Life Metrics")
-    kpis_latest = kpis[(kpis["date_day"] == kpis["date_day"].max())]
+    kpis_time_latest = kpis_time[(kpis_time["date_day"] == kpis_time["date_day"].max())]
+    kpis_notes_latest = kpis_notes[(kpis_notes["date_day"] == kpis_notes["date_day"].max())]
 
     st.header("Focus")
     graph_as_bullet_sparkline(
-        pit_data=kpis_latest,
-        hist_data=kpis,
+        pit_data=kpis_time_latest,
+        hist_data=kpis_time,
         actual_column="rolling_avg_daily_minutes_actual",
         target_column="daily_minutes_target",
         above_column="daily_minutes_target_above",
@@ -210,8 +249,8 @@ def main():
 
     st.header("Learning")
     graph_as_bullet_sparkline(
-        pit_data=kpis_latest,
-        hist_data=kpis,
+        pit_data=kpis_time_latest,
+        hist_data=kpis_time,
         actual_column="rolling_avg_daily_minutes_actual",
         target_column="daily_minutes_target",
         above_column="daily_minutes_target_above",
@@ -222,6 +261,20 @@ def main():
         description_column="display_description",
         filter_field="task_category",
         filter_value=["slope_learning"],
+    )
+    graph_as_bullet_sparkline(
+        pit_data=kpis_notes_latest,
+        hist_data=kpis_notes,
+        actual_column="rolling_avg_daily_notes_actual",
+        target_column="daily_notes_target",
+        above_column="daily_notes_target_above",
+        low_value_column="daily_notes_target_low",
+        failing_value_column="daily_notes_target_fail",
+        time_column="date_day",
+        flagged_description_column="display_description_with_flag",
+        description_column="display_description",
+        filter_field="task_category",
+        filter_value=["atomic_notes"],
     )
 
 
