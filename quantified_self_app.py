@@ -46,6 +46,9 @@ def graph_as_bullet_sparkline(
     time_column=None,
     filter_field=None,
     filter_value=None,
+    heatmap_actual_column=None,
+    heatmap_weekly_column=None,
+    heatmap_weekly_target_column=None
 ):
 
     bullet_chart = (
@@ -55,7 +58,7 @@ def graph_as_bullet_sparkline(
                 color="#c0b8b4",
             )
             .encode(alt.X(f"{above_column}:Q", scale=alt.Scale(nice=False), title=None))
-            .properties(height=50, width=500),
+            .properties(height=50, width=425),
             alt.Chart().mark_bar(color="#a59c99").encode(x=f"{low_value_column}:Q"),
             alt.Chart().mark_bar(color="#8b827f").encode(x=f"{failing_value_column}:Q"),
             alt.Chart()
@@ -106,7 +109,7 @@ def graph_as_bullet_sparkline(
                     axis=alt.Axis(labels=False, grid=False, domain=False, ticks=False),
                 ),
             )
-            .properties(height=50),
+            .properties(height=50, width=225),
             alt.Chart()
             .mark_area(color="#a59c99")
             .encode(x=f"{time_column}:T", y=f"{low_value_column}:Q"),
@@ -136,7 +139,32 @@ def graph_as_bullet_sparkline(
         )
     )
 
-    return st.altair_chart(bullet_chart | sparkline)
+    heatmap = alt.Chart(hist_data).mark_rect().encode(
+        x=alt.X('year_week_number:O',axis=alt.Axis(ticks=False, labels=False, title=None)
+        ),
+        y=alt.Y('day_of_week:O',axis=alt.Axis(ticks=False, labels=False, title=None)),
+        color=alt.Color(f"{heatmap_actual_column}",scale=alt.Scale(scheme="warmgreys"),legend=None),
+        tooltip=[
+            alt.Tooltip('monthdate(date_day):T', title='Date'),
+            alt.Tooltip(f"{target_column}", title='Daily Value'),
+            alt.Tooltip(f"{heatmap_actual_column}", title='Daily Value'),
+            alt.Tooltip(f"{heatmap_weekly_target_column}", title='Week to Date Target'),
+            alt.Tooltip(f"{heatmap_weekly_column}", title='Week to Date Value'),
+
+        ]
+    ).properties(height=50, width =50).facet(
+            row=alt.Row(
+                f"{description_column}:O",
+                sort="ascending",
+                title=None,
+                header=alt.Header(labels=False),
+            ),
+            spacing=60,
+        ).transform_filter(
+            alt.FieldOneOfPredicate(field=f"{filter_field}", oneOf=filter_value)
+        )
+
+    return st.altair_chart(bullet_chart | sparkline | heatmap)
 
 
 # Import data & clean up data types
@@ -160,11 +188,14 @@ df_time = create_df_from_query(
                 when task_category = 'deep_work_okr' then 'Time spent in deep work on personal OKRs (6 week rolling average of minutes per day)'
                 when task_category = 'deep_work_professional' then 'Time spent in deep work on professional priorities (6 week rolling average of minutes per day)'
                 when task_category = 'slope_learning' then 'Time spent learning and practicing (6 week rolling average of minutes per day)'
-            end as display_description
+            end as display_description,
+
+            concat(extract('isoyear' from date_day),extract('week' from date_day)) as year_week_number,
+            extract(isodow from date_day)-1 as day_of_week
 
         from analytics.mart_quantified_self.ps_daily_time_tracks
 
-        where task_category is not null and date_day >= '2020-11-01'
+        where task_category is not null and date_day >= (current_date - interval '42 days')
     )
 
     select
@@ -198,11 +229,14 @@ df_notes = create_df_from_query(
 
             case 
                 when task_category = 'atomic_notes' then '# atomic notes added to Zettelkasten (6 week rolling average of notes per day)'
-            end as display_description
+            end as display_description,
+
+            concat(extract('isoyear' from date_day),extract('week' from date_day)) as year_week_number,
+            extract(isodow from date_day)-1 as day_of_week
 
         from analytics.mart_quantified_self.ps_daily_note_writes
 
-        where task_category is not null and date_day >= '2020-11-01'
+        where task_category is not null and date_day >= (current_date - interval '42 days')
     )
 
     select
@@ -218,6 +252,48 @@ kpis_notes = df_notes.copy()
 
 kpis_notes["date_day"] = pd.to_datetime(kpis_notes["date_day"])
 
+df_books = create_df_from_query(
+    """
+    with
+
+    query as (
+
+        select 
+            *,
+            daily_books_target *.6 as daily_books_target_fail,
+            daily_books_target *.90 as daily_books_target_low,
+            daily_books_target *1.2 as daily_books_target_above,
+
+            case
+                when rolling_avg_daily_books_actual < daily_books_target *.6 then ' 🚩'
+            end as failure_flag,
+
+            case 
+                when task_category = 'books_read' then '# books read (6 week rolling average of books per day)'
+            end as display_description,
+
+            concat(extract('isoyear' from date_day),extract('week' from date_day)) as year_week_number,
+            extract(isodow from date_day)-1 as day_of_week
+            
+
+        from analytics.mart_quantified_self.ps_daily_book_reads
+
+        where task_category is not null and date_day >= (current_date - interval '42 days')
+    )
+
+    select
+        *,
+
+        concat(display_description, failure_flag) as display_description_with_flag
+    
+    from query
+    """
+)
+
+kpis_books = df_books.copy()
+
+kpis_books["date_day"] = pd.to_datetime(kpis_books["date_day"])
+
 # Set viz theme
 alt.themes.enable("latimes")
 st.set_page_config(layout="wide")
@@ -230,6 +306,7 @@ def main():
     st.title("Life Metrics")
     kpis_time_latest = kpis_time[(kpis_time["date_day"] == kpis_time["date_day"].max())]
     kpis_notes_latest = kpis_notes[(kpis_notes["date_day"] == kpis_notes["date_day"].max())]
+    kpis_books_latest = kpis_books[(kpis_books["date_day"] == kpis_books["date_day"].max())]
 
     st.header("Focus")
     graph_as_bullet_sparkline(
@@ -245,6 +322,9 @@ def main():
         description_column="display_description",
         filter_field="task_category",
         filter_value=["deep_work_okr", "deep_work_professional"],
+        heatmap_actual_column="daily_minutes_actual",
+        heatmap_weekly_column="weekly_minutes_actual",
+        heatmap_weekly_target_column="weekly_minutes_target"
     )
 
     st.header("Learning")
@@ -261,6 +341,9 @@ def main():
         description_column="display_description",
         filter_field="task_category",
         filter_value=["slope_learning"],
+        heatmap_actual_column="daily_minutes_actual",
+        heatmap_weekly_column="weekly_minutes_actual",
+        heatmap_weekly_target_column="weekly_minutes_target"
     )
     graph_as_bullet_sparkline(
         pit_data=kpis_notes_latest,
@@ -275,6 +358,26 @@ def main():
         description_column="display_description",
         filter_field="task_category",
         filter_value=["atomic_notes"],
+        heatmap_actual_column="daily_notes_actual",
+        heatmap_weekly_column="weekly_notes_actual",
+        heatmap_weekly_target_column="weekly_notes_target"
+    )
+    graph_as_bullet_sparkline(
+        pit_data=kpis_books_latest,
+        hist_data=kpis_books,
+        actual_column="rolling_avg_daily_books_actual",
+        target_column="daily_books_target",
+        above_column="daily_books_target_above",
+        low_value_column="daily_books_target_low",
+        failing_value_column="daily_books_target_fail",
+        time_column="date_day",
+        flagged_description_column="display_description_with_flag",
+        description_column="display_description",
+        filter_field="task_category",
+        filter_value=["books_read"],
+        heatmap_actual_column="daily_books_actual",
+        heatmap_weekly_column="weekly_books_actual",
+        heatmap_weekly_target_column="weekly_books_target"
     )
 
 
