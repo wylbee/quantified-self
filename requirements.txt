@@ -1,6 +1,6 @@
 pandas
 numpy
 altair
-streamlit
+streamlit==0.72.0
 xlrd
 psycopg2
