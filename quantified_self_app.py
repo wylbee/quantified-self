@@ -146,7 +146,7 @@ def graph_as_bullet_sparkline(
         color=alt.Color(f"{heatmap_actual_column}",scale=alt.Scale(scheme="warmgreys"),legend=None),
         tooltip=[
             alt.Tooltip('monthdate(date_day):T', title='Date'),
-            alt.Tooltip(f"{target_column}", title='Daily Value'),
+            alt.Tooltip(f"{target_column}", title='Daily Target'),
             alt.Tooltip(f"{heatmap_actual_column}", title='Daily Value'),
             alt.Tooltip(f"{heatmap_weekly_target_column}", title='Week to Date Target'),
             alt.Tooltip(f"{heatmap_weekly_column}", title='Week to Date Value'),
