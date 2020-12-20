@@ -48,7 +48,7 @@ def graph_as_bullet_sparkline(
     filter_value=None,
     heatmap_actual_column=None,
     heatmap_weekly_column=None,
-    heatmap_weekly_target_column=None
+    heatmap_weekly_target_column=None,
 ):
 
     bullet_chart = (
@@ -58,7 +58,7 @@ def graph_as_bullet_sparkline(
                 color="#c0b8b4",
             )
             .encode(alt.X(f"{above_column}:Q", scale=alt.Scale(nice=False), title=None))
-            .properties(height=50, width=425),
+            .properties(height=50, width=350),
             alt.Chart().mark_bar(color="#a59c99").encode(x=f"{low_value_column}:Q"),
             alt.Chart().mark_bar(color="#8b827f").encode(x=f"{failing_value_column}:Q"),
             alt.Chart()
@@ -139,20 +139,29 @@ def graph_as_bullet_sparkline(
         )
     )
 
-    heatmap = alt.Chart(hist_data).mark_rect().encode(
-        x=alt.X('year_week_number:O',axis=alt.Axis(ticks=False, labels=False, title=None)
-        ),
-        y=alt.Y('day_of_week:O',axis=alt.Axis(ticks=False, labels=False, title=None)),
-        color=alt.Color(f"{heatmap_actual_column}",scale=alt.Scale(scheme="warmgreys"),legend=None),
-        tooltip=[
-            alt.Tooltip('monthdate(date_day):T', title='Date'),
-            alt.Tooltip(f"{target_column}", title='Daily Target'),
-            alt.Tooltip(f"{heatmap_actual_column}", title='Daily Value'),
-            alt.Tooltip(f"{heatmap_weekly_target_column}", title='Week to Date Target'),
-            alt.Tooltip(f"{heatmap_weekly_column}", title='Week to Date Value'),
-
-        ]
-    ).properties(height=50, width =50).facet(
+    heatmap = (
+        alt.Chart(hist_data)
+        .mark_rect()
+        .encode(
+            x=alt.X("year_week_number:O", axis=None),
+            y=alt.Y("day_of_week:O", axis=None),
+            color=alt.Color(
+                f"{heatmap_actual_column}",
+                scale=alt.Scale(scheme="lighttealblue"),
+                legend=None,
+            ),
+            tooltip=[
+                alt.Tooltip("monthdate(date_day):T", title="Date"),
+                alt.Tooltip(f"{target_column}", title="Daily Target"),
+                alt.Tooltip(f"{heatmap_actual_column}", title="Daily Value"),
+                alt.Tooltip(
+                    f"{heatmap_weekly_target_column}", title="Week to Date Target"
+                ),
+                alt.Tooltip(f"{heatmap_weekly_column}", title="Week to Date Value"),
+            ],
+        )
+        .properties(height=50, width=50)
+        .facet(
             row=alt.Row(
                 f"{description_column}:O",
                 sort="ascending",
@@ -160,9 +169,12 @@ def graph_as_bullet_sparkline(
                 header=alt.Header(labels=False),
             ),
             spacing=60,
-        ).transform_filter(
+        )
+        .resolve_scale(color="independent")
+        .transform_filter(
             alt.FieldOneOfPredicate(field=f"{filter_field}", oneOf=filter_value)
         )
+    )
 
     return st.altair_chart(bullet_chart | sparkline | heatmap)
 
@@ -185,9 +197,9 @@ df_time = create_df_from_query(
             end as failure_flag,
 
             case 
-                when task_category = 'deep_work_okr' then 'Time spent in deep work on personal OKRs (6 week rolling average of minutes per day)'
-                when task_category = 'deep_work_professional' then 'Time spent in deep work on professional priorities (6 week rolling average of minutes per day)'
-                when task_category = 'slope_learning' then 'Time spent learning and practicing (6 week rolling average of minutes per day)'
+                when task_category = 'deep_work_okr' then 'Time spent in deep work on personal OKRs (6 wk avg of minutes per day)'
+                when task_category = 'deep_work_professional' then 'Time spent in deep work on professional priorities (6 wk avg of minutes per day)'
+                when task_category = 'slope_learning' then 'Time spent learning and practicing (6 wk avg of minutes per day)'
             end as display_description,
 
             concat(extract('isoyear' from date_day),extract('week' from date_day)) as year_week_number,
@@ -228,7 +240,7 @@ df_notes = create_df_from_query(
             end as failure_flag,
 
             case 
-                when task_category = 'atomic_notes' then '# atomic notes added to Zettelkasten (6 week rolling average of notes per day)'
+                when task_category = 'atomic_notes' then '# atomic notes added to Zettelkasten (6 wk avg of notes per day)'
             end as display_description,
 
             concat(extract('isoyear' from date_day),extract('week' from date_day)) as year_week_number,
@@ -269,7 +281,7 @@ df_books = create_df_from_query(
             end as failure_flag,
 
             case 
-                when task_category = 'books_read' then '# books read (6 week rolling average of books per day)'
+                when task_category = 'books_read' then '# books read (6 wk avg of books per day)'
             end as display_description,
 
             concat(extract('isoyear' from date_day),extract('week' from date_day)) as year_week_number,
@@ -305,8 +317,12 @@ def main():
 
     st.title("Life Metrics")
     kpis_time_latest = kpis_time[(kpis_time["date_day"] == kpis_time["date_day"].max())]
-    kpis_notes_latest = kpis_notes[(kpis_notes["date_day"] == kpis_notes["date_day"].max())]
-    kpis_books_latest = kpis_books[(kpis_books["date_day"] == kpis_books["date_day"].max())]
+    kpis_notes_latest = kpis_notes[
+        (kpis_notes["date_day"] == kpis_notes["date_day"].max())
+    ]
+    kpis_books_latest = kpis_books[
+        (kpis_books["date_day"] == kpis_books["date_day"].max())
+    ]
 
     st.header("Focus")
     graph_as_bullet_sparkline(
@@ -324,7 +340,7 @@ def main():
         filter_value=["deep_work_okr", "deep_work_professional"],
         heatmap_actual_column="daily_minutes_actual",
         heatmap_weekly_column="weekly_minutes_actual",
-        heatmap_weekly_target_column="weekly_minutes_target"
+        heatmap_weekly_target_column="weekly_minutes_target",
     )
 
     st.header("Learning")
@@ -343,7 +359,7 @@ def main():
         filter_value=["slope_learning"],
         heatmap_actual_column="daily_minutes_actual",
         heatmap_weekly_column="weekly_minutes_actual",
-        heatmap_weekly_target_column="weekly_minutes_target"
+        heatmap_weekly_target_column="weekly_minutes_target",
     )
     graph_as_bullet_sparkline(
         pit_data=kpis_notes_latest,
@@ -360,7 +376,7 @@ def main():
         filter_value=["atomic_notes"],
         heatmap_actual_column="daily_notes_actual",
         heatmap_weekly_column="weekly_notes_actual",
-        heatmap_weekly_target_column="weekly_notes_target"
+        heatmap_weekly_target_column="weekly_notes_target",
     )
     graph_as_bullet_sparkline(
         pit_data=kpis_books_latest,
@@ -377,7 +393,7 @@ def main():
         filter_value=["books_read"],
         heatmap_actual_column="daily_books_actual",
         heatmap_weekly_column="weekly_books_actual",
-        heatmap_weekly_target_column="weekly_books_target"
+        heatmap_weekly_target_column="weekly_books_target",
     )
 
 
