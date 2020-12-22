@@ -221,7 +221,7 @@ df_time = create_df_from_query(
 
 kpis_time = df_time.copy()
 
-kpis_time["date_day"] = pd.to_datetime(kpis_time["date_day"])
+kpis_time["date_day"] = pd.to_datetime(kpis_time["date_day"]) + pd.Timedelta('05:00:00')
 
 df_notes = create_df_from_query(
     """
@@ -262,7 +262,7 @@ df_notes = create_df_from_query(
 
 kpis_notes = df_notes.copy()
 
-kpis_notes["date_day"] = pd.to_datetime(kpis_notes["date_day"])
+kpis_notes["date_day"] = pd.to_datetime(kpis_notes["date_day"]) + pd.Timedelta('05:00:00')
 
 df_books = create_df_from_query(
     """
@@ -304,7 +304,7 @@ df_books = create_df_from_query(
 
 kpis_books = df_books.copy()
 
-kpis_books["date_day"] = pd.to_datetime(kpis_books["date_day"])
+kpis_books["date_day"] = pd.to_datetime(kpis_books["date_day"]) + pd.Timedelta('05:00:00')
 
 # Set viz theme
 alt.themes.enable("latimes")
@@ -323,7 +323,7 @@ def main():
     kpis_books_latest = kpis_books[
         (kpis_books["date_day"] == kpis_books["date_day"].max())
     ]
-
+    
     st.header("Focus")
     graph_as_bullet_sparkline(
         pit_data=kpis_time_latest,
