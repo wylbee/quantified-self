@@ -223,46 +223,46 @@ kpis_time = df_time.copy()
 
 kpis_time["date_day"] = pd.to_datetime(kpis_time["date_day"]) + pd.Timedelta('05:00:00')
 
-df_notes = create_df_from_query(
-    """
-    with
-
-    query as (
-
-        select 
-            *,
-            daily_notes_target *.6 as daily_notes_target_fail,
-            daily_notes_target *.90 as daily_notes_target_low,
-            daily_notes_target *1.2 as daily_notes_target_above,
-
-            case
-                when rolling_avg_daily_notes_actual < daily_notes_target *.6 then ' 🚩'
-            end as failure_flag,
-
-            case 
-                when task_category = 'atomic_notes' then '# atomic notes added to Zettelkasten (6 wk avg of notes per day)'
-            end as display_description,
-
-            concat(extract('isoyear' from date_day),extract('week' from date_day)) as year_week_number,
-            extract(isodow from date_day)-1 as day_of_week
-
-        from analytics.mart_quantified_self.ps_daily_note_writes
-
-        where task_category is not null and date_day >= (current_date - interval '42 days')
-    )
-
-    select
-        *,
-
-        concat(display_description, failure_flag) as display_description_with_flag
-    
-    from query
-    """
-)
-
-kpis_notes = df_notes.copy()
-
-kpis_notes["date_day"] = pd.to_datetime(kpis_notes["date_day"]) + pd.Timedelta('05:00:00')
+#df_notes = create_df_from_query(
+#    """
+#    with
+#
+#    query as (
+#
+#        select 
+#            *,
+#            daily_notes_target *.6 as daily_notes_target_fail,
+#            daily_notes_target *.90 as daily_notes_target_low,
+#            daily_notes_target *1.2 as daily_notes_target_above,
+#
+#            case
+#                when rolling_avg_daily_notes_actual < daily_notes_target *.6 then ' 🚩'
+#            end as failure_flag,
+#
+#            case 
+#                when task_category = 'atomic_notes' then '# atomic notes added to Zettelkasten (6 wk avg of notes per day)'
+#            end as display_description,
+#
+#            concat(extract('isoyear' from date_day),extract('week' from date_day)) as year_week_number,
+#            extract(isodow from date_day)-1 as day_of_week
+#
+#        from analytics.mart_quantified_self.ps_daily_note_writes
+#
+#        where task_category is not null and date_day >= (current_date - interval '42 days')
+#    )
+#
+#    select
+#        *,
+#
+#        concat(display_description, failure_flag) as display_description_with_flag
+#    
+#    from query
+#    """
+#)
+#
+#kpis_notes = df_notes.copy()
+#
+#kpis_notes["date_day"] = pd.to_datetime(kpis_notes["date_day"]) + pd.Timedelta('05:00:00')
 
 df_books = create_df_from_query(
     """
@@ -361,9 +361,9 @@ def main():
 
     st.title("Life Metrics")
     kpis_time_latest = kpis_time[(kpis_time["date_day"] == kpis_time["date_day"].max())]
-    kpis_notes_latest = kpis_notes[
-        (kpis_notes["date_day"] == kpis_notes["date_day"].max())
-    ]
+#    kpis_notes_latest = kpis_notes[
+#        (kpis_notes["date_day"] == kpis_notes["date_day"].max())
+#    ]
     kpis_books_latest = kpis_books[
         (kpis_books["date_day"] == kpis_books["date_day"].max())
     ]
@@ -425,23 +425,23 @@ def main():
         heatmap_weekly_column="weekly_minutes_actual",
         heatmap_weekly_target_column="weekly_minutes_target",
     )
-    graph_as_bullet_sparkline(
-        pit_data=kpis_notes_latest,
-        hist_data=kpis_notes,
-        actual_column="rolling_avg_daily_notes_actual",
-        target_column="daily_notes_target",
-        above_column="daily_notes_target_above",
-        low_value_column="daily_notes_target_low",
-        failing_value_column="daily_notes_target_fail",
-        time_column="date_day",
-        flagged_description_column="display_description_with_flag",
-        description_column="display_description",
-        filter_field="task_category",
-        filter_value=["atomic_notes"],
-        heatmap_actual_column="daily_notes_actual",
-        heatmap_weekly_column="weekly_notes_actual",
-        heatmap_weekly_target_column="weekly_notes_target",
-    )
+#    graph_as_bullet_sparkline(
+#        pit_data=kpis_notes_latest,
+#        hist_data=kpis_notes,
+#        actual_column="rolling_avg_daily_notes_actual",
+#        target_column="daily_notes_target",
+#        above_column="daily_notes_target_above",
+#        low_value_column="daily_notes_target_low",
+#        failing_value_column="daily_notes_target_fail",
+#        time_column="date_day",
+#        flagged_description_column="display_description_with_flag",
+#        description_column="display_description",
+#        filter_field="task_category",
+#        filter_value=["atomic_notes"],
+#        heatmap_actual_column="daily_notes_actual",
+#        heatmap_weekly_column="weekly_notes_actual",
+#        heatmap_weekly_target_column="weekly_notes_target",
+#    )
     graph_as_bullet_sparkline(
         pit_data=kpis_books_latest,
         hist_data=kpis_books,
