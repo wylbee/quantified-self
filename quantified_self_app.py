@@ -197,7 +197,7 @@ df_time = create_df_from_query(
             end as failure_flag,
 
             case 
-                when task_category = 'deep_work_okr' then 'Time spent in deep work on personal OKRs (2 wk avg of minutes per day)'
+                when task_category = 'deep_work_okr' then 'Time spent in deep work on personal projects (2 wk avg of minutes per day)'
                 when task_category = 'deep_work_professional' then 'Time spent in deep work on professional priorities (2 wk avg of minutes per day)'
                 when task_category = 'slope_learning' then 'Time spent learning and practicing (2 wk avg of minutes per day)'
             end as display_description,
