@@ -197,9 +197,9 @@ df_time = create_df_from_query(
             end as failure_flag,
 
             case 
-                when task_category = 'deep_work_okr' then 'Time spent in deep work on personal OKRs (6 wk avg of minutes per day)'
-                when task_category = 'deep_work_professional' then 'Time spent in deep work on professional priorities (6 wk avg of minutes per day)'
-                when task_category = 'slope_learning' then 'Time spent learning and practicing (6 wk avg of minutes per day)'
+                when task_category = 'deep_work_okr' then 'Time spent in deep work on personal OKRs (2 wk avg of minutes per day)'
+                when task_category = 'deep_work_professional' then 'Time spent in deep work on professional priorities (2 wk avg of minutes per day)'
+                when task_category = 'slope_learning' then 'Time spent learning and practicing (2 wk avg of minutes per day)'
             end as display_description,
 
             concat(extract('isoyear' from date_day),extract('week' from date_day)) as year_week_number,
@@ -281,7 +281,7 @@ df_books = create_df_from_query(
             end as failure_flag,
 
             case 
-                when task_category = 'books_read' then '# books read (6 wk avg of books per day)'
+                when task_category = 'books_read' then '# books read (2 wk avg of books per day)'
             end as display_description,
 
             concat(extract('isoyear' from date_day),extract('week' from date_day)) as year_week_number,
@@ -323,9 +323,9 @@ df_health = create_df_from_query(
             end as failure_flag,
 
             case 
-                when metric_name = 'sleep_score' then 'Sleep score (6 wk avg of daily sleep score)'
-                when metric_name = 'readiness_score' then 'Readiness score (6 wk avg of daily readiness score)'
-                when metric_name = 'activity_score' then 'Activity score (6 wk avg of daily activity score)'
+                when metric_name = 'sleep_score' then 'Sleep score (2 wk avg of daily sleep score)'
+                when metric_name = 'readiness_score' then 'Readiness score (2 wk avg of daily readiness score)'
+                when metric_name = 'activity_score' then 'Activity score (2 wk avg of daily activity score)'
             end as display_description,
 
             concat(extract('isoyear' from date_day),extract('week' from date_day)) as year_week_number,
