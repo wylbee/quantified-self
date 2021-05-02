@@ -319,7 +319,7 @@ df_health = create_df_from_query(
             100 as daily_value_target_above,
 
             case
-                when rolling_avg_daily_value_actual < daily_value_target *.6 then ' 🚩'
+                when rolling_avg_daily_value_actual < 70 then ' 🚩'
             end as failure_flag,
 
             case 
@@ -334,7 +334,11 @@ df_health = create_df_from_query(
 
         from analytics.mart_quantified_self.ps_daily_health_tracks
 
-        where metric_name is not null and date_day >= (current_date - interval '42 days')
+        where 
+            metric_name is not null and 
+            date_day >= (current_date - interval '42 days') and 
+            date_day < current_date
+
     )
 
     select
