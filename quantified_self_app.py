@@ -388,7 +388,7 @@ def main():
         flagged_description_column="display_description_with_flag",
         description_column="display_description",
         filter_field="task_category",
-        filter_value=["deep_work_okr", "deep_work_professional"],
+        filter_value=["deep_work_professional"],
         heatmap_actual_column="daily_minutes_actual",
         heatmap_weekly_column="weekly_minutes_actual",
         heatmap_weekly_target_column="weekly_minutes_target",
